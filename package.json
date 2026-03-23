@@ -1,0 +1,5 @@
+{
+  "name": "license-forge",
+  "private": true,
+  "workspaces": ["web", "packages/*"]
+}

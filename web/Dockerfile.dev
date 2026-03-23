@@ -1,0 +1,20 @@
+FROM node:20-alpine
+
+WORKDIR /repo
+
+# Copy manifests first — Docker layer cache skips npm install if they haven't changed
+COPY package.json ./
+COPY packages/ui/package.json ./packages/ui/
+COPY web/package.json ./web/
+
+# Do NOT copy package-lock.json — it is generated on macOS and contains
+# platform-specific optional deps (e.g. @rollup/rollup-darwin-arm64) that
+# cause npm to skip installing the linux-musl equivalents needed in this container.
+RUN npm install
+
+WORKDIR /repo/web
+EXPOSE 5173
+
+# Re-run install at startup so anonymous-volume node_modules stays in sync
+# with package.json changes (fast no-op when already up to date)
+CMD sh -c "cd /repo && npm install && cd /repo/web && npm run dev -- --host"
