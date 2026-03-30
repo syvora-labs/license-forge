@@ -11,6 +11,7 @@ contracts/broadcast/
 .env
 .env.local
 .env.*.local
+.env.old
 
 # ── OS files ──────────────────────────────────────────────────────────────────
 .DS_Store
