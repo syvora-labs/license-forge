@@ -396,7 +396,9 @@ onMounted(fetchAllMandators)
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 1rem;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap;
 }
 
 .admin-header h1 {
@@ -423,6 +425,23 @@ onMounted(fetchAllMandators)
     justify-content: space-between;
     padding: 1rem 1.25rem;
     gap: 1rem;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 600px) {
+    .mandator-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .mandator-actions {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .mandator-badges {
+        flex-wrap: wrap;
+    }
 }
 
 .mandator-name {
@@ -463,11 +482,14 @@ onMounted(fetchAllMandators)
     gap: 0.75rem;
     padding: 0.5rem 0;
     border-bottom: 1px solid rgba(0, 0, 0, 0.04);
+    flex-wrap: wrap;
 }
 
 .member-email {
     flex: 1;
+    min-width: 160px;
     font-size: 0.875rem;
+    word-break: break-all;
 }
 
 .invite-row {
@@ -475,10 +497,18 @@ onMounted(fetchAllMandators)
     align-items: center;
     gap: 0.5rem;
     padding-top: 0.75rem;
+    flex-wrap: wrap;
 }
 
 .invite-row .syvora-input-wrap {
     flex: 1;
+    min-width: 180px;
+}
+
+@media (max-width: 600px) {
+    .member-row {
+        gap: 0.5rem;
+    }
 }
 
 .role-select {

@@ -50,6 +50,18 @@ const router = createRouter({
             component: () => import('../views/AdminView.vue'),
             meta: { requiresAuth: true, requiredRole: 'admin' },
         },
+        {
+            path: '/certificates',
+            name: 'certificates',
+            component: () => import('../views/CertificatesView.vue'),
+            meta: { requiresAuth: true, module: 'certificates' },
+        },
+        {
+            path: '/certificates/:id',
+            name: 'certificates-detail',
+            component: () => import('../views/CertificateDetailView.vue'),
+            meta: { requiresAuth: true, module: 'certificates' },
+        },
     ],
 })
 

@@ -24,9 +24,17 @@ export interface ModuleDefinition {
     label: string
 }
 
+export interface MandatorMember {
+    user_id: string
+    role: 'admin' | 'member'
+    email: string
+    display_name: string | null
+}
+
 const mandator = ref<Mandator | null>(null)
 const mandators = ref<Mandator[]>([])
 const currentRole = ref<'admin' | 'member' | null>(null)
+const members = ref<MandatorMember[]>([])
 const loading = ref(false)
 
 const MODULE_DEFINITIONS = reactive<ModuleDefinition[]>([])
@@ -43,6 +51,8 @@ const enabledModules = computed<string[]>(() => {
 function isModuleEnabled(name: string): boolean {
     return enabledModules.value.includes(name)
 }
+
+const certificatesEnabled = computed(() => isModuleEnabled('certificates'))
 
 async function fetchMandators() {
     loading.value = true
@@ -102,6 +112,36 @@ async function selectMandator(id: string) {
     currentRole.value = (data?.role as 'admin' | 'member') ?? null
 }
 
+async function fetchMandatorMembers(mandatorId: string) {
+    const { data: memberRows, error } = await supabase
+        .from('mandator_users')
+        .select('user_id, role')
+        .eq('mandator_id', mandatorId)
+
+    if (error) throw error
+    if (!memberRows || memberRows.length === 0) {
+        members.value = []
+        return
+    }
+
+    const userIds = memberRows.map((m) => m.user_id)
+    const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, email, display_name')
+        .in('id', userIds)
+
+    const profileMap = Object.fromEntries(
+        (profiles ?? []).map((p) => [p.id, p]),
+    )
+
+    members.value = memberRows.map((m) => ({
+        user_id: m.user_id,
+        role: m.role as 'admin' | 'member',
+        email: profileMap[m.user_id]?.email ?? 'Unknown',
+        display_name: profileMap[m.user_id]?.display_name ?? null,
+    }))
+}
+
 async function refreshMandator() {
     if (!mandator.value) return
 
@@ -123,11 +163,14 @@ export function useMandator() {
         mandator,
         mandators,
         currentRole,
+        members,
         loading,
         enabledModules,
+        certificatesEnabled,
         MODULE_DEFINITIONS,
         isModuleEnabled,
         fetchMandators,
+        fetchMandatorMembers,
         selectMandator,
         refreshMandator,
     }

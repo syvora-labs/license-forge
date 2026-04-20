@@ -1,0 +1,383 @@
+<script setup lang="ts">
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import {
+    SyvoraCard,
+    SyvoraButton,
+    SyvoraBadge,
+    SyvoraInput,
+    SyvoraTextarea,
+    SyvoraFormField,
+    SyvoraAlert,
+} from '@syvora/ui'
+import { useMandator } from '../composables/useMandator'
+import { useCertificates, type Certificate } from '../composables/useCertificates'
+
+const route = useRoute()
+const router = useRouter()
+
+const { mandator, members, fetchMandatorMembers } = useMandator()
+const { getCertificate, updateCertificate, deleteCertificate } = useCertificates()
+
+const cert = ref<Certificate | null>(null)
+const loading = ref(true)
+const saving = ref(false)
+const deleting = ref(false)
+const error = ref('')
+const success = ref(false)
+
+const formName = ref('')
+const formExpiresAt = ref('')
+const formResponsibleUserId = ref<string | null>(null)
+const formProvider = ref('')
+const formCost = ref<string>('')
+const formNotes = ref('')
+
+const certId = computed(() => route.params.id as string)
+
+async function load() {
+    loading.value = true
+    error.value = ''
+    try {
+        const data = await getCertificate(certId.value)
+        if (!data) {
+            error.value = 'Certificate not found'
+            return
+        }
+        cert.value = data
+        formName.value = data.name
+        formExpiresAt.value = data.expires_at
+        formResponsibleUserId.value = data.responsible_user_id
+        formProvider.value = data.provider ?? ''
+        formCost.value = data.cost != null ? String(data.cost) : ''
+        formNotes.value = data.notes ?? ''
+
+        if (mandator.value) {
+            await fetchMandatorMembers(mandator.value.id)
+        }
+    } catch (e: unknown) {
+        error.value = e instanceof Error ? e.message : 'Failed to load certificate'
+    } finally {
+        loading.value = false
+    }
+}
+
+onMounted(load)
+watch(certId, load)
+
+async function handleSave() {
+    if (!cert.value) return
+    saving.value = true
+    error.value = ''
+    success.value = false
+    try {
+        const updated = await updateCertificate(cert.value.id, {
+            name: formName.value,
+            expires_at: formExpiresAt.value,
+            responsible_user_id: formResponsibleUserId.value,
+            provider: formProvider.value || null,
+            cost: formCost.value === '' ? null : Number(formCost.value),
+            notes: formNotes.value || null,
+        })
+        cert.value = { ...cert.value, ...updated }
+        success.value = true
+    } catch (e: unknown) {
+        error.value = e instanceof Error ? e.message : 'Failed to save'
+    } finally {
+        saving.value = false
+    }
+}
+
+async function handleDelete() {
+    if (!cert.value) return
+    if (!confirm(`Delete certificate "${cert.value.name}"? This cannot be undone.`)) return
+
+    deleting.value = true
+    try {
+        await deleteCertificate(cert.value.id)
+        router.push('/certificates')
+    } catch (e: unknown) {
+        error.value = e instanceof Error ? e.message : 'Failed to delete'
+        deleting.value = false
+    }
+}
+
+function daysUntil(dateStr: string): number {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const target = new Date(dateStr)
+    target.setHours(0, 0, 0, 0)
+    return Math.floor((target.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+}
+
+const status = computed<{ label: string; variant: 'success' | 'warning' | 'error' } | null>(() => {
+    if (!cert.value) return null
+    const days = daysUntil(cert.value.expires_at)
+    if (days < 0) return { label: 'Expired', variant: 'error' }
+    if (days <= 30) return { label: 'Expiring', variant: 'warning' }
+    return { label: 'Valid', variant: 'success' }
+})
+
+const daysLabel = computed(() => {
+    if (!cert.value) return ''
+    const days = daysUntil(cert.value.expires_at)
+    if (days < 0) return `${Math.abs(days)} day${Math.abs(days) === 1 ? '' : 's'} overdue`
+    if (days === 0) return 'Expires today'
+    return `${days} day${days === 1 ? '' : 's'} until expiration`
+})
+
+function formatDateTime(dateStr: string): string {
+    return new Date(dateStr).toLocaleString(undefined, {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+    })
+}
+</script>
+
+<template>
+    <div class="cert-detail">
+        <RouterLink to="/certificates" class="cert-back">&larr; Back to certificates</RouterLink>
+
+        <div v-if="loading" class="cert-loading">Loading...</div>
+
+        <template v-else-if="cert">
+            <header class="cert-header">
+                <h1>{{ cert.name }}</h1>
+                <SyvoraBadge v-if="status" :variant="status.variant">{{ status.label }}</SyvoraBadge>
+            </header>
+
+            <SyvoraAlert v-if="success" variant="info" dismissible @dismiss="success = false">
+                Certificate updated.
+            </SyvoraAlert>
+
+            <SyvoraAlert v-if="error" variant="error" dismissible @dismiss="error = ''">
+                {{ error }}
+            </SyvoraAlert>
+
+            <div class="cert-grid">
+                <SyvoraCard title="Basics">
+                    <div class="cert-form">
+                        <SyvoraFormField label="Name" for="d-name">
+                            <SyvoraInput id="d-name" v-model="formName" />
+                        </SyvoraFormField>
+
+                        <SyvoraFormField label="Expiration date" for="d-expires">
+                            <SyvoraInput id="d-expires" v-model="formExpiresAt" type="date" />
+                        </SyvoraFormField>
+
+                        <SyvoraFormField label="Responsible" for="d-responsible">
+                            <select
+                                id="d-responsible"
+                                v-model="formResponsibleUserId"
+                                class="cert-select"
+                            >
+                                <option :value="null">— None —</option>
+                                <option
+                                    v-for="m in members"
+                                    :key="m.user_id"
+                                    :value="m.user_id"
+                                >
+                                    {{ m.display_name || m.email }}
+                                </option>
+                            </select>
+                        </SyvoraFormField>
+                    </div>
+                </SyvoraCard>
+
+                <SyvoraCard title="Additional details">
+                    <div class="cert-form">
+                        <SyvoraFormField label="Provider" for="d-provider">
+                            <SyvoraInput
+                                id="d-provider"
+                                v-model="formProvider"
+                                placeholder="Issuing authority or vendor"
+                            />
+                        </SyvoraFormField>
+
+                        <SyvoraFormField label="Cost" for="d-cost">
+                            <SyvoraInput
+                                id="d-cost"
+                                v-model="formCost"
+                                type="number"
+                                suffix="CHF"
+                                placeholder="0.00"
+                            />
+                        </SyvoraFormField>
+
+                        <SyvoraFormField
+                            label="Notes"
+                            for="d-notes"
+                            :char-count="formNotes.length"
+                            :max-chars="2000"
+                        >
+                            <SyvoraTextarea
+                                id="d-notes"
+                                v-model="formNotes"
+                                :rows="5"
+                                :maxlength="2000"
+                            />
+                        </SyvoraFormField>
+                    </div>
+                </SyvoraCard>
+
+                <SyvoraCard title="Status">
+                    <div class="cert-status-panel">
+                        <div class="cert-stat">
+                            <span class="cert-stat-label">Expires</span>
+                            <span class="cert-stat-value">{{ daysLabel }}</span>
+                        </div>
+                        <div class="cert-stat">
+                            <span class="cert-stat-label">Last updated</span>
+                            <span class="cert-stat-value">{{ formatDateTime(cert.updated_at) }}</span>
+                        </div>
+                    </div>
+                </SyvoraCard>
+            </div>
+
+            <div class="cert-actions">
+                <SyvoraButton
+                    variant="ghost"
+                    :loading="deleting"
+                    @click="handleDelete"
+                >
+                    Delete
+                </SyvoraButton>
+                <SyvoraButton
+                    :loading="saving"
+                    :disabled="!formName || !formExpiresAt"
+                    @click="handleSave"
+                >
+                    Save
+                </SyvoraButton>
+            </div>
+        </template>
+    </div>
+</template>
+
+<style scoped>
+.cert-detail {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+.cert-back {
+    display: inline-block;
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    text-decoration: none;
+    margin-bottom: 1rem;
+}
+
+.cert-back:hover {
+    color: var(--color-accent);
+}
+
+.cert-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+}
+
+.cert-header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0;
+}
+
+.cert-loading {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: 2rem 0;
+}
+
+.cert-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+@media (min-width: 768px) {
+    .cert-grid {
+        grid-template-columns: 1fr 1fr;
+    }
+
+    .cert-grid > :deep(.card):nth-child(3) {
+        grid-column: span 2;
+    }
+}
+
+.cert-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0 1.25rem 1.25rem;
+}
+
+.cert-select {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    background: rgba(255, 255, 255, 0.58);
+    border: 1px solid rgba(255, 255, 255, 0.52);
+    border-radius: var(--radius-sm, 0.625rem);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+.cert-status-panel {
+    padding: 0 1.25rem 1.25rem;
+    display: flex;
+    gap: 2rem;
+    flex-wrap: wrap;
+}
+
+.cert-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.cert-stat-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+}
+
+.cert-stat-value {
+    font-size: 0.9375rem;
+    font-weight: 500;
+}
+
+.cert-actions {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+@media (max-width: 600px) {
+    .cert-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .cert-status-panel {
+        gap: 1rem;
+    }
+
+    .cert-actions {
+        flex-direction: column-reverse;
+    }
+
+    .cert-actions :deep(.btn) {
+        width: 100%;
+    }
+}
+</style>
