@@ -62,7 +62,7 @@ RETURNS TABLE (
         COUNT(*)::INTEGER                                                           AS total_count,
         COUNT(*) FILTER (
             WHERE expires_at >= current_date
-              AND expires_at <= current_date + INTERVAL '30 days'
+              AND expires_at <= current_date + INTERVAL '7 days'
         )::INTEGER                                                                  AS expiring_soon_count,
         COUNT(*) FILTER (WHERE expires_at < current_date)::INTEGER                  AS expired_count
     FROM public.certificates
@@ -114,7 +114,7 @@ The top-level page for the feature: a sortable list of all certificates for the 
   - Name (linked to `/certificates/:id`).
   - Expiration date (formatted locale short, e.g. `20 Apr 2027`).
   - Responsible (display name from `profiles`, fallback to email, fallback to "—").
-  - Status badge: `success` "Valid" (>30 days), `warning` "Expiring" (≤30 days, ≥0 days), `error` "Expired" (<0 days).
+  - Status badge: `success` "Valid" (>7 days), `warning` "Expiring" (≤7 days, ≥0 days), `error` "Expired" (<0 days).
 - Empty-state (`SyvoraEmptyState`): "No certificates yet. Add one to start tracking renewal dates."
 - "Add certificate" modal fields (minimal create form):
   - Name (`SyvoraInput`, required).

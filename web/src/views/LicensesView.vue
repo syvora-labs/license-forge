@@ -87,7 +87,7 @@ function daysUntil(dateStr: string): number {
 function statusFor(lic: License): { label: string; variant: 'success' | 'warning' | 'error' } {
     const days = daysUntil(lic.expires_at)
     if (days < 0) return { label: 'Expired', variant: 'error' }
-    if (days <= 30) return { label: 'Expiring', variant: 'warning' }
+    if (days <= 7) return { label: 'Expiring', variant: 'warning' }
     return { label: 'Valid', variant: 'success' }
 }
 

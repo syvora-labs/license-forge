@@ -66,7 +66,7 @@ RETURNS TABLE (
         COUNT(*)::INTEGER AS total_count,
         COUNT(*) FILTER (
             WHERE expires_at >= current_date
-              AND expires_at <= current_date + INTERVAL '30 days'
+              AND expires_at <= current_date + INTERVAL '7 days'
         )::INTEGER AS expiring_soon_count,
         COUNT(*) FILTER (WHERE expires_at < current_date)::INTEGER AS expired_count
     FROM public.licenses
@@ -118,7 +118,7 @@ The top-level page for the feature: a sortable list of all licenses for the acti
 - List of licenses with responsive layout (same pattern as Certificates):
   - **Desktop (>600px)**: table with columns Name (linked to `/licenses/:id`), Expires (formatted `20 Apr 2027`), Responsible (display name → email → "—"), Status badge.
   - **Mobile (≤600px)**: card list. Each card is a `SyvoraCard` wrapping a `RouterLink` to `/licenses/:id`, with the license name + status badge on top (flex-wrap, no overflow), then labelled rows for Expires and Responsible.
-- Status badge logic: `success` "Valid" (>30 days), `warning` "Expiring" (≤30 days, ≥0 days), `error` "Expired" (<0 days).
+- Status badge logic: `success` "Valid" (>7 days), `warning` "Expiring" (≤7 days, ≥0 days), `error` "Expired" (<0 days).
 - Empty-state (`SyvoraEmptyState`): "No licenses yet. Add one to start tracking renewal dates."
 - "Add license" modal fields (minimal create form):
   - Name (`SyvoraInput`, required).

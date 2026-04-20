@@ -225,7 +225,7 @@ watch(() => mandator.value?.id, loadAll)
 
                 <SyvoraCard>
                     <div class="dash-stat">
-                        <span class="dash-stat-label">Expiring in 30 days</span>
+                        <span class="dash-stat-label">Expiring in 7 days</span>
                         <span class="dash-stat-value dash-stat-value--warn">{{ expiring30Combined }}</span>
                     </div>
                 </SyvoraCard>

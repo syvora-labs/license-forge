@@ -44,7 +44,7 @@ function daysUntil(dateStr: string): number {
 function statusFor(expires_at: string): ItemStatus {
     const days = daysUntil(expires_at)
     if (days < 0) return 'expired'
-    if (days <= 30) return 'expiring'
+    if (days <= 7) return 'expiring'
     return 'valid'
 }
 

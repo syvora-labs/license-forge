@@ -87,7 +87,7 @@ function daysUntil(dateStr: string): number {
 function statusFor(cert: Certificate): { label: string; variant: 'success' | 'warning' | 'error' } {
     const days = daysUntil(cert.expires_at)
     if (days < 0) return { label: 'Expired', variant: 'error' }
-    if (days <= 30) return { label: 'Expiring', variant: 'warning' }
+    if (days <= 7) return { label: 'Expiring', variant: 'warning' }
     return { label: 'Valid', variant: 'success' }
 }
 

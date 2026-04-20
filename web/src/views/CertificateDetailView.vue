@@ -114,7 +114,7 @@ const status = computed<{ label: string; variant: 'success' | 'warning' | 'error
     if (!cert.value) return null
     const days = daysUntil(cert.value.expires_at)
     if (days < 0) return { label: 'Expired', variant: 'error' }
-    if (days <= 30) return { label: 'Expiring', variant: 'warning' }
+    if (days <= 7) return { label: 'Expiring', variant: 'warning' }
     return { label: 'Valid', variant: 'success' }
 })
 

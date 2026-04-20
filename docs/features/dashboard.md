@@ -63,7 +63,7 @@ The single page for the feature, rendered at `/`. Layout is a vertical stack: a 
 **Stat cards (2×2 grid on desktop, 1-col on mobile)**:
 - **Certificates**: total count with a small stacked-bar sparkline (valid / expiring / expired segments, coloured `success` / `warning` / `error`). Whole card is a `RouterLink` to `/certificates`.
 - **Licenses**: same structure, links to `/licenses`.
-- **Expiring in 30 days**: single number (certs + licenses combined, from the two summary RPCs).
+- **Expiring in 7 days**: single number (certs + licenses combined, from the two summary RPCs).
 - **Total cost**: single number formatted as `CHF 12'345.00` (locale `de-CH`). Sum of all non-null `cost` values.
 
 **Expiring soon card (full width)**:
