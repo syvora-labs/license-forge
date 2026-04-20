@@ -34,8 +34,8 @@ const router = createRouter({
         // Protected routes
         {
             path: '/',
-            name: 'home',
-            component: () => import('../views/HomeView.vue'),
+            name: 'dashboard',
+            component: () => import('../views/DashboardView.vue'),
             meta: { requiresAuth: true },
         },
         {
@@ -94,17 +94,17 @@ router.beforeEach((to) => {
 
     // Redirect authenticated users away from auth pages
     if (isAuthenticated && to.meta.requiresAuth === false) {
-        return { name: 'home' }
+        return { name: 'dashboard' }
     }
 
     // Module guard
     if (typeof to.meta.module === 'string' && !isModuleEnabled(to.meta.module)) {
-        return { name: 'home' }
+        return { name: 'dashboard' }
     }
 
     // Role guard
     if (typeof to.meta.requiredRole === 'string' && currentRole.value !== to.meta.requiredRole) {
-        return { name: 'home' }
+        return { name: 'dashboard' }
     }
 
     return true

@@ -57,7 +57,7 @@ function onSelectMandator(item: CommandItem) {
 // Nav items
 const navItems = computed(() => {
     const items: { to: string; label: string }[] = [
-        { to: '/', label: 'Home' },
+        { to: '/', label: 'Dashboard' },
     ]
 
     for (const mod of MODULE_DEFINITIONS) {
