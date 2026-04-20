@@ -53,6 +53,7 @@ function isModuleEnabled(name: string): boolean {
 }
 
 const certificatesEnabled = computed(() => isModuleEnabled('certificates'))
+const licensesEnabled = computed(() => isModuleEnabled('licenses'))
 
 async function fetchMandators() {
     loading.value = true
@@ -167,6 +168,7 @@ export function useMandator() {
         loading,
         enabledModules,
         certificatesEnabled,
+        licensesEnabled,
         MODULE_DEFINITIONS,
         isModuleEnabled,
         fetchMandators,

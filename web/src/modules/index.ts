@@ -7,3 +7,9 @@ MODULE_DEFINITIONS.push({
     column: 'module_certificates',
     label: 'Certificates',
 })
+
+MODULE_DEFINITIONS.push({
+    route: 'licenses',
+    column: 'module_licenses',
+    label: 'Licenses',
+})

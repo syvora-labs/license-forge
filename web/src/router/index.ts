@@ -62,6 +62,18 @@ const router = createRouter({
             component: () => import('../views/CertificateDetailView.vue'),
             meta: { requiresAuth: true, module: 'certificates' },
         },
+        {
+            path: '/licenses',
+            name: 'licenses',
+            component: () => import('../views/LicensesView.vue'),
+            meta: { requiresAuth: true, module: 'licenses' },
+        },
+        {
+            path: '/licenses/:id',
+            name: 'licenses-detail',
+            component: () => import('../views/LicenseDetailView.vue'),
+            meta: { requiresAuth: true, module: 'licenses' },
+        },
     ],
 })
 
