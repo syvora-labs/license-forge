@@ -1,48 +1,7 @@
-create table profiles (
-  id uuid references auth.users not null,
-  updated_at timestamp with time zone,
-  username text unique,
-  avatar_url text,
-  website text,
+-- Seed data for development
+-- Profiles and avatars bucket are now created by the scaffolding migration.
+-- This file seeds test mandators and memberships.
 
-  primary key (id),
-  unique(username),
-  constraint username_length check (char_length(username) >= 3)
-);
-
-alter table profiles enable row level security;
-
-create policy "Public profiles are viewable by the owner."
-  on profiles for select
-  using ( auth.uid() = id );
-
-create policy "Users can insert their own profile."
-  on profiles for insert
-  with check ( auth.uid() = id );
-
-create policy "Users can update own profile."
-  on profiles for update
-  using ( auth.uid() = id );
-
--- Set up Realtime
-begin;
-  drop publication if exists supabase_realtime;
-  create publication supabase_realtime;
-commit;
-alter publication supabase_realtime add table profiles;
-
--- Set up Storage
-insert into storage.buckets (id, name)
-values ('avatars', 'avatars');
-
-create policy "Avatar images are publicly accessible."
-  on storage.objects for select
-  using ( bucket_id = 'avatars' );
-
-create policy "Anyone can upload an avatar."
-  on storage.objects for insert
-  with check ( bucket_id = 'avatars' );
-
-create policy "Anyone can update an avatar."
-  on storage.objects for update
-  with check ( bucket_id = 'avatars' );
+-- Note: test users must be created through the Supabase Auth API (sign-up).
+-- After sign-up, the handle_new_user() trigger auto-creates their profile.
+-- Then insert mandator memberships here once user UUIDs are known.
