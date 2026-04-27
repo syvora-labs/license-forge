@@ -630,6 +630,22 @@ services:
         "/app/bin/migrate && /app/bin/supavisor eval \"$$(cat /etc/pooler/pooler.exs)\" && /app/bin/server"
       ]
 
+  web:
+    container_name: supabase-web
+    build:
+      context: ../..
+      dockerfile: web/Dockerfile.dev
+    ports:
+      - '5173:5173'
+    environment:
+      VITE_SUPABASE_URL: ${SUPABASE_PUBLIC_URL:-http://localhost:8000}
+      VITE_SUPABASE_ANON_KEY: ${ANON_KEY}
+    volumes:
+      - ../..:/repo
+      - /repo/node_modules
+      - /repo/web/node_modules
+      - /repo/packages/ui/node_modules
+
 volumes:
   db-config:
   deno-cache:
