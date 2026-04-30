@@ -111,7 +111,7 @@ services:
         read_only: true
         tmpfs:
             - /tmp:size=64M,mode=1777
-            - /usr/local/kong:size=32M,mode=0755
+            - /usr/local/kong:size=32M
         cap_drop: [ALL]
         mem_limit: 256m
         cpus: 0.5
@@ -218,6 +218,11 @@ services:
         cpus: 1.0
 
     # Vector — base already mounts the docker socket as :ro,z, no override needed
+    # security_opt: Compose v5 merges security_opt additively across overlay files.
+    # The base docker-compose.yml supplies label=disable (needed on SELinux hosts to read
+    # the docker socket) and the *prod-defaults anchor supplies no-new-privileges:true.
+    # Both end up in the final merged config. An explicit security_opt block here would
+    # duplicate label=disable from the base and fail Compose v5 validation.
     vector:
         <<: *prod-defaults
         read_only: true
