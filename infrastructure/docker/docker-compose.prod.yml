@@ -67,6 +67,8 @@ services:
             - ./volumes/proxy/nginx/supabase-nginx-prod.conf.tpl:/etc/nginx/supabase-nginx-prod.conf.tpl:ro
             - nginx_letsencrypt:/etc/letsencrypt
         cap_drop: [ALL]
+        # NET_BIND_SERVICE: bind :80/:443. CHOWN/SETUID/SETGID: drop privileges to nginx user after binding.
+        # DAC_OVERRIDE: jonasal/nginx-certbot writes certs across UID boundaries during renewal.
         cap_add:
             - NET_BIND_SERVICE
             - CHOWN
@@ -91,6 +93,8 @@ services:
         ports: !reset []
         expose:
             - "8080"
+        # Strip dev volumes inherited from base (../..:/repo etc.) — prod uses the built dist baked into the image
+        volumes: !reset []
         read_only: true
         cap_drop: [ALL]
         mem_limit: 64m
@@ -127,7 +131,8 @@ services:
         environment:
             GOTRUE_MAILER_AUTOCONFIRM: "${ENABLE_EMAIL_AUTOCONFIRM:-true}"
             GOTRUE_EXTERNAL_EMAIL_ENABLED: "${ENABLE_EMAIL_SIGNUP:-false}"
-            GOTRUE_DISABLE_SIGNUP: "${ENABLE_EMAIL_SIGNUP:+false}"
+            # Prod design = no email signup. Hardcoded; flip to "false" if you also flip ENABLE_EMAIL_SIGNUP=true.
+            GOTRUE_DISABLE_SIGNUP: "true"
             GOTRUE_EXTERNAL_ANONYMOUS_USERS_ENABLED: "${ENABLE_ANONYMOUS_USERS:-false}"
             GOTRUE_SMTP_HOST: ""
             GOTRUE_SMTP_USER: ""
