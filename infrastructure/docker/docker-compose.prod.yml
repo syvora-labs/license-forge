@@ -96,6 +96,9 @@ services:
         # Strip dev volumes inherited from base (../..:/repo etc.) — prod uses the built dist baked into the image
         volumes: !reset []
         read_only: true
+        # nginx-unprivileged writes proxy_temp/client_temp/nginx.pid under /tmp.
+        tmpfs:
+            - /tmp:size=32M,mode=1777
         cap_drop: [ALL]
         mem_limit: 64m
         cpus: 0.25
@@ -108,12 +111,20 @@ services:
         ports: !reset []
         environment:
             KONG_PORT_MAPS: "443:8000,443:8443"
+            # The kong image installs its libraries (libada.so, etc.) under /usr/local/kong,
+            # so we cannot tmpfs that path — it would hide the libraries. Relocate Kong's
+            # writable runtime prefix and the rendered declarative config under /tmp instead.
+            KONG_PREFIX: /tmp/kong
+            # /tmp exists at start; /tmp/kong (KONG_PREFIX) is created by kong, not the entrypoint,
+            # so the rendered declarative config must live in /tmp directly.
+            KONG_DECLARATIVE_CONFIG: /tmp/kong.yml
         read_only: true
         tmpfs:
-            - /tmp:size=64M,mode=1777
-            - /usr/local/kong:size=32M
+            # /tmp now holds nginx temp dirs, the rendered kong.yml, and the LMDB cache
+            # (under KONG_PREFIX=/tmp/kong) — 64M is too tight, OpenResty workers OOM.
+            - /tmp:size=256M,mode=1777
         cap_drop: [ALL]
-        mem_limit: 256m
+        mem_limit: 768m
         cpus: 0.5
 
     supavisor:
@@ -160,6 +171,12 @@ services:
         tmpfs:
             - /tmp:size=64M,mode=1777
         cap_drop: [ALL]
+        # Realtime entrypoint runs `sudo -E -u nobody /app/bin/migrate` to drop privileges.
+        # SETUID/SETGID for setresuid; AUDIT_WRITE for sudo's audit plugin (sudoers_audit).
+        cap_add:
+            - SETUID
+            - SETGID
+            - AUDIT_WRITE
         mem_limit: 512m
         cpus: 0.5
 
@@ -187,6 +204,15 @@ services:
     db:
         <<: *prod-defaults
         cap_drop: [ALL]
+        # Postgres entrypoint runs as root to fix perms on the persisted data dir,
+        # then drops to the postgres user via gosu. Needs FOWNER/CHOWN to repair an
+        # existing PGDATA, DAC_READ_SEARCH to traverse it, and SETUID/SETGID to gosu.
+        cap_add:
+            - CHOWN
+            - DAC_READ_SEARCH
+            - FOWNER
+            - SETUID
+            - SETGID
         mem_limit: 2g
         cpus: 2.0
 
