@@ -1,0 +1,60 @@
+# ============================================================
+# License Forge — Local self-signed variant of the prod overlay
+# Stack on top of docker-compose.prod.yml:
+#   docker compose -f docker-compose.yml \
+#                  -f docker-compose.prod.yml \
+#                  -f docker-compose.prod.selfsigned.yml \
+#                  --env-file .env.prod up -d
+#
+# The outer nginx is swapped from jonasal/nginx-certbot (which fetches LE
+# certs over ACME) to vanilla nginx:1.29-alpine, with a bind-mounted
+# self-signed cert dir produced by utils/gen-selfsigned-certs.sh. All other
+# prod hardening (caps, security_opt, mem/cpu, ports) is inherited from
+# docker-compose.prod.yml unchanged.
+# ============================================================
+
+services:
+
+    nginx:
+        image: nginx:1.29-alpine
+        # Compose merges service `volumes` by appending; without !override, the
+        # named volume `nginx_letsencrypt:/etc/letsencrypt` from the prod
+        # overlay would still be mounted alongside our bind mount. We replace
+        # the inherited list entirely and re-declare only what this overlay
+        # needs. (Note: !reset is documented but silently drops all volumes in
+        # Compose v5 — !override is the correct tag for replace-not-append.)
+        volumes: !override
+            - ./volumes/proxy/nginx/supabase-nginx-prod.conf.tpl:/etc/nginx/supabase-nginx-prod.conf.tpl:ro
+            - ./volumes/proxy/letsencrypt-selfsigned:/etc/letsencrypt:ro
+        # Override the nginx:alpine entrypoint so its docker-entrypoint.d
+        # template-substitution scripts don't interfere with our render.
+        entrypoint:
+            - /bin/sh
+            - -c
+        command:
+            - |
+                set -eu
+                # envsubst lives in gettext; openssl ships with the alpine image already.
+                apk add --no-cache gettext >/dev/null
+
+                # The prod template references /etc/nginx/user_conf.d/{studio-allowlist.conf,dashboard-passwd}
+                # — keep those paths so the template stays unchanged across both overlays.
+                mkdir -p /etc/nginx/user_conf.d
+
+                # 1. IP allowlist (empty STUDIO_ALLOWED_CIDRS => empty file => deny all)
+                : > /etc/nginx/user_conf.d/studio-allowlist.conf
+                for cidr in $${STUDIO_ALLOWED_CIDRS}; do
+                    echo "allow $${cidr};" >> /etc/nginx/user_conf.d/studio-allowlist.conf
+                done
+
+                # 2. htpasswd for studio basic auth (openssl is in the alpine image)
+                printf '%s:%s\n' "$${PROXY_AUTH_USERNAME}" "$$(openssl passwd -apr1 "$${PROXY_AUTH_PASSWORD}")" \
+                    > /etc/nginx/user_conf.d/dashboard-passwd
+
+                # 3. Render template into conf.d so vanilla nginx auto-includes it
+                envsubst '$${PROXY_DOMAIN}' \
+                    < /etc/nginx/supabase-nginx-prod.conf.tpl \
+                    > /etc/nginx/conf.d/default.conf
+
+                # 4. Boot vanilla nginx in the foreground
+                exec nginx -g 'daemon off;'
