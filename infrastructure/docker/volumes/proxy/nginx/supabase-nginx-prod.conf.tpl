@@ -7,7 +7,12 @@
 # ---- Rate-limit zones ----
 limit_req_zone $binary_remote_addr zone=api_general:10m rate=20r/s;
 limit_req_zone $binary_remote_addr zone=api_auth:10m    rate=5r/s;
-limit_req_zone $binary_remote_addr zone=studio:10m      rate=5r/s;
+# Studio is a Next.js dashboard; first paint pulls dozens of static assets
+# (fonts, monaco-editor chunks, favicons). 5r/s burst=10 (the prior values)
+# 503'd most asset requests behind a successful basic-auth login. The studio
+# vhost is already gated by IP allowlist + basic-auth; this rate limit's job
+# is to cap brute-force on the auth prompt, not throttle authenticated UI.
+limit_req_zone $binary_remote_addr zone=studio:10m      rate=30r/s;
 
 # ---- TLS hardening ----
 ssl_protocols TLSv1.2 TLSv1.3;
@@ -186,7 +191,7 @@ server {
     auth_basic           "License Forge Studio";
     auth_basic_user_file /etc/nginx/user_conf.d/dashboard-passwd;
 
-    limit_req zone=studio burst=10 nodelay;
+    limit_req zone=studio burst=100 nodelay;
 
     location / {
         proxy_pass http://studio:3000;
