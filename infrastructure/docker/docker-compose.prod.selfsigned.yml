@@ -34,8 +34,11 @@ services:
         command:
             - |
                 set -eu
-                # envsubst lives in gettext; openssl ships with the alpine image already.
-                apk add --no-cache gettext >/dev/null
+                # envsubst is in gettext; nginx:alpine ships libssl (linked into nginx)
+                # but NOT the openssl CLI we use below for the htpasswd hash, so install both.
+                # Without openssl the htpasswd render silently produced an empty hash
+                # because `set -e` doesn't propagate failures inside $().
+                apk add --no-cache openssl gettext >/dev/null
 
                 # The prod template references /etc/nginx/user_conf.d/{studio-allowlist.conf,dashboard-passwd}
                 # — keep those paths so the template stays unchanged across both overlays.
